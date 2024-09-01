@@ -5,8 +5,8 @@
   export let live;
   export let myself;
 
-  let isPlayerHost = game.host === player.id;
-  let isPlayerTurn = game.turn === player.id;
+  $: isPlayerHost = game.host === player.id;
+  $: isPlayerTurn = game.turn === player.id;
 
   function startGame() {
     live.pushEventTo(myself, "start-game", {});

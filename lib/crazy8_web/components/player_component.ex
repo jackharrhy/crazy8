@@ -1,4 +1,4 @@
-defmodule Crazy8Web.PlayerLive do
+defmodule Crazy8Web.PlayerComponent do
   require IEx
 
   use Crazy8Web, :live_component

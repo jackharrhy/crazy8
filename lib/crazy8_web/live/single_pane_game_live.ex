@@ -41,7 +41,7 @@ defmodule Crazy8Web.SinglePaneGameLive do
     ~H"""
     <div class="grid grid-cols-2 grid-rows-[1.5fr_1fr_1fr] gap-0 h-full">
       <div class="col-span-2 border border-stone-300">
-        <.live_component module={Crazy8Web.MainLive} id="main" game={@game} />
+        <.live_component module={Crazy8Web.MainComponent} id="main" game={@game} />
       </div>
       <%= for {player, index} <- Enum.with_index(@game.players) do %>
         <div class={"#{player_area_class(index)} border border-stone-300"}>
@@ -51,7 +51,7 @@ defmodule Crazy8Web.SinglePaneGameLive do
             </p>
           </div>
           <.live_component
-            module={Crazy8Web.PlayerLive}
+            module={Crazy8Web.PlayerComponent}
             id={"player-#{player.id}"}
             game={@game}
             player={player}
@@ -73,6 +73,7 @@ defmodule Crazy8Web.SinglePaneGameLive do
   end
 
   def handle_info(%{event: :game_updated, payload: %{game: game}}, socket) do
+    Logger.debug("Game #{game.code} updated")
     socket = assign(socket, game: game)
     {:noreply, socket}
   end

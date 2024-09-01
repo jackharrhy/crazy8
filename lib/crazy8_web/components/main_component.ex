@@ -1,4 +1,4 @@
-defmodule Crazy8Web.MainLive do
+defmodule Crazy8Web.MainComponent do
   use Crazy8Web, :live_component
 
   def render(assigns) do

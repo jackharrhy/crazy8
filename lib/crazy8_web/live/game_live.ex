@@ -67,12 +67,14 @@ defmodule Crazy8Web.GameLive do
 
   def render(assigns) do
     ~H"""
-    <.live_component
-      module={Crazy8Web.PlayerLive}
-      id={"player-#{@player.id}"}
-      game={@game}
-      player={@player}
-    />
+    <%= if !is_nil(@player) do %>
+      <.live_component
+        module={Crazy8Web.PlayerComponent}
+        id={"player-#{@player.id}"}
+        game={@game}
+        player={@player}
+      />
+    <% end %>
     """
   end
 
