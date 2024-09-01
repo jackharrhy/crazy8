@@ -23,17 +23,23 @@ defmodule Crazy8.Card do
           suit: atom(),
           value: integer(),
           type: :face | :number,
-          art: String.t()
+          art: String.t(),
+          art_url: String.t()
         }
-  defstruct [:suit, :value, :type, :art]
+  defstruct [:suit, :value, :type, :art, :art_url]
 
   @spec new(atom(), integer(), atom()) :: t()
   def new(suit, value, type) do
+    suit_formatted_for_url = String.capitalize(Atom.to_string(suit))
+    value_formatted_for_url = value_to_art(value)
+    art_url = "/images/Cards/card#{suit_formatted_for_url}#{value_formatted_for_url}.png"
+
     struct!(__MODULE__, %{
       suit: suit,
       value: value,
       type: type,
-      art: generate_art(suit, value)
+      art: generate_art(suit, value),
+      art_url: art_url
     })
   end
 
@@ -61,13 +67,6 @@ defmodule Crazy8.Card do
     value_art = value_to_art(value)
 
     "#{suit_art} #{value_art}"
-  end
-
-  @spec art_url(t()) :: String.t()
-  def art_url(card) do
-    suit = String.capitalize(Atom.to_string(card.suit))
-    value = value_to_art(card.value)
-    "/images/Cards/card#{suit}#{value}.png"
   end
 
   @spec can_play(t(), t()) :: :ok | {:error, atom()}

@@ -10,7 +10,7 @@ defmodule Crazy8.Game do
             state: :setup,
             players: [],
             deck: nil,
-            host_id: nil,
+            host: nil,
             turn: nil,
             pile: [],
             discard: []
@@ -25,7 +25,7 @@ defmodule Crazy8.Game do
           state: game_state,
           players: [Player.t()],
           deck: Deck.cards() | nil,
-          host_id: String.t() | nil,
+          host: String.t() | nil,
           turn: String.t() | nil,
           pile: [Deck.cards()],
           discard: [Deck.cards()]
@@ -107,8 +107,8 @@ defmodule Crazy8.Game do
         player = Player.new(player_id, player_name, [])
 
         game =
-          if is_nil(game.host_id) do
-            Map.put(game, :host_id, player_id)
+          if is_nil(game.host) do
+            Map.put(game, :host, player_id)
           else
             game
           end
@@ -132,7 +132,7 @@ defmodule Crazy8.Game do
          :ok <- more_than_one_player(game),
          game <- put_game_into_state(game, :playing) do
       random_player_id = Enum.random(game.players) |> Map.get(:id)
-      player = get_player_by_id(game, random_player_id)
+      {:ok, player} = get_player_by_id(game, random_player_id)
       game = game |> deal_hands() |> Map.put(:turn, random_player_id)
 
       {top_card, deck} = List.pop_at(game.deck, 0)
@@ -165,23 +165,26 @@ defmodule Crazy8.Game do
 
       pile = [card | game.pile]
 
-      if Enum.empty?(player.hand) do
-        game
-        |> put_game_into_state(:win)
-        |> Map.put(:winner, player_id)
-        |> Map.put(:players, players)
-        |> Map.put(:pile, pile)
-        |> new_message("#{player} has won the game!")
-      else
-        next_player_index = rem(get_player_index(game, player_id) + 1, length(game.players))
-        next_player = Enum.at(game.players, next_player_index)
+      game =
+        if Enum.empty?(player.hand) do
+          game
+          |> put_game_into_state(:win)
+          |> Map.put(:winner, player_id)
+          |> Map.put(:players, players)
+          |> Map.put(:pile, pile)
+          |> new_message("#{player} has won the game!")
+        else
+          next_player_index = rem(get_player_index(game, player_id) + 1, length(game.players))
+          next_player = Enum.at(game.players, next_player_index)
 
-        game
-        |> Map.put(:turn, next_player.id)
-        |> Map.put(:players, players)
-        |> Map.put(:pile, pile)
-        |> new_message("it's now #{next_player}'s turn")
-      end
+          game
+          |> Map.put(:turn, next_player.id)
+          |> Map.put(:players, players)
+          |> Map.put(:pile, pile)
+          |> new_message("it's now #{next_player}'s turn")
+        end
+
+      {:ok, game}
     end
   end
 
@@ -268,7 +271,7 @@ defmodule Crazy8.Game do
 
   @spec is_player_host?(t(), String.t()) :: boolean()
   def is_player_host?(game, player_id) do
-    player_id == game.host_id
+    player_id == game.host
   end
 
   @spec is_player_turn(t(), String.t()) :: :ok | {:error, atom()}

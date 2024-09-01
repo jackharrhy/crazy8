@@ -52,7 +52,8 @@ defmodule Crazy8Web do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {Crazy8Web.Layouts, :app}
+        layout: {Crazy8Web.Layouts, :app},
+        container: {:div, class: "h-full flex flex-col"}
 
       unquote(html_helpers())
     end
