@@ -10,3 +10,7 @@ this code is a descendant from [jahns](https://github.com/jackharrhy/jahns), whi
 
 - `mix setup` to install and setup dependencies
 - start with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+
+## credits
+
+- placeholder card assets from [kenny's 'Board Game Pack'](https://kenney.nl/assets/boardgame-pack)
