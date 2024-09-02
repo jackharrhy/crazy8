@@ -16,7 +16,7 @@ defmodule Crazy8.Game do
             turn: nil,
             pile: []
 
-  @max_players 4
+  @max_players 8
 
   @type game_state :: :setup | :playing | :game_over
   @type turn_state :: :play_or_draw_card | :pick_next_suit
