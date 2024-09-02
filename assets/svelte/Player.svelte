@@ -1,4 +1,7 @@
 <script>
+  import { Toaster } from "$lib/components/ui/sonner";
+  import { toast } from "svelte-sonner";
+
   export let player;
   export let game;
 
@@ -7,6 +10,16 @@
 
   $: isPlayerHost = game.host === player.id;
   $: isPlayerTurn = game.turn === player.id;
+
+  const suits = ["hearts", "diamonds", "clubs", "spades"];
+
+  if (live) {
+    live.handleEvent("flash", (event) => {
+      toast[event.level](event.message, {
+        duration: 5000,
+      });
+    });
+  }
 
   function startGame() {
     live.pushEventTo(myself, "start-game", {});
@@ -19,7 +32,13 @@
   function drawCard() {
     live.pushEventTo(myself, "draw-card", {});
   }
+
+  function pickNextSuit(suit) {
+    live.pushEventTo(myself, "pick-next-suit", { suit: suit });
+  }
 </script>
+
+<Toaster />
 
 <div class="flex flex-col flex-wrap justify-center items-center p-4">
   {#if game.state === "setup"}
@@ -58,12 +77,25 @@
     {/each}
   </div>
 
-  {#if game.state === "playing" && isPlayerTurn}
+  {#if game.state === "playing" && game.turn_state === "play_or_draw_card" && isPlayerTurn}
     <button
       on:click={drawCard}
       class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded ml-4"
     >
       Draw Card
     </button>
+  {/if}
+
+  {#if game.turn_state === "pick_next_suit" && isPlayerTurn}
+    <div class="flex flex-wrap justify-center items-center gap-4">
+      {#each suits as suit}
+        <button
+          on:click={() => pickNextSuit(suit)}
+          class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mb-4"
+        >
+          {suit}
+        </button>
+      {/each}
+    </div>
   {/if}
 </div>

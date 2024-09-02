@@ -8,6 +8,8 @@ defmodule Crazy8.Game do
   defstruct messages: [],
             code: nil,
             state: :setup,
+            turn_state: :play_or_draw_card,
+            next_suit: nil,
             players: [],
             deck: nil,
             host: nil,
@@ -18,11 +20,14 @@ defmodule Crazy8.Game do
   @max_players 4
 
   @type game_state :: :setup | :playing | :game_over
+  @type turn_state :: :play_or_draw_card | :pick_next_suit
 
   @type t :: %__MODULE__{
           messages: [String.t()],
           code: String.t() | nil,
           state: game_state,
+          turn_state: turn_state,
+          next_suit: atom() | nil,
           players: [Player.t()],
           deck: Deck.cards() | nil,
           host: String.t() | nil,
@@ -33,15 +38,12 @@ defmodule Crazy8.Game do
 
   @spec new(String.t()) :: t()
   def new(code) do
-    deck = Deck.fresh_deck() |> Deck.shuffle()
-
     struct!(
       __MODULE__,
       messages: [
         "game #{code} created"
       ],
-      code: code,
-      deck: deck
+      code: code
     )
   end
 
@@ -71,6 +73,8 @@ defmodule Crazy8.Game do
       player = %{player | hand: hand}
       player_index = get_player_index(game, player_id)
 
+      Logger.debug("#{game.code}: Dealt #{length(hand)} cards to #{player}")
+
       game =
         game
         |> Map.put(:deck, deck)
@@ -88,7 +92,7 @@ defmodule Crazy8.Game do
       player = %{player | hand: hand}
       player_index = get_player_index(game, player.id)
 
-      Logger.debug("Dealt #{length(hand)} cards to #{player}")
+      Logger.debug("#{game.code}: Dealt #{length(hand)} cards to #{player}")
 
       game
       |> Map.put(:deck, deck)
@@ -113,6 +117,8 @@ defmodule Crazy8.Game do
             game
           end
 
+        Logger.debug("#{game.code}: Player #{player} joined")
+
         game =
           game
           |> Map.put(:players, game.players ++ [player])
@@ -133,9 +139,19 @@ defmodule Crazy8.Game do
          game <- put_game_into_state(game, :playing) do
       random_player_id = Enum.random(game.players) |> Map.get(:id)
       {:ok, player} = get_player_by_id(game, random_player_id)
-      game = game |> deal_hands() |> Map.put(:turn, random_player_id)
+
+      game =
+        game
+        |> Map.put(:deck, Deck.fresh_deck(length(game.players)) |> Deck.shuffle())
+        |> deal_hands()
+        |> Map.put(:turn, random_player_id)
+        |> Map.put(:turn_state, :play_or_draw_card)
 
       {top_card, deck} = List.pop_at(game.deck, 0)
+
+      Logger.debug(
+        "#{game.code}: Starting game with #{player} going first, top card is #{top_card}"
+      )
 
       game =
         game
@@ -153,7 +169,7 @@ defmodule Crazy8.Game do
          {:ok, player} <- get_player_by_id(game, player_id),
          :ok <- is_player_turn(game, player_id),
          {:ok, card} <- get_card_by_index(player, card_index),
-         :ok <- Card.can_play(card, hd(game.pile)) do
+         :ok <- Card.can_play(card, hd(game.pile), game.next_suit) do
       game = game |> new_message("player #{player} played card #{card}")
 
       player = %{player | hand: List.delete_at(player.hand, card_index)}
@@ -166,22 +182,33 @@ defmodule Crazy8.Game do
       pile = [card | game.pile]
 
       game =
+        game
+        |> Map.put(:pile, pile)
+        |> Map.put(:players, players)
+        |> Map.put(:next_suit, nil)
+
+      game =
         if Enum.empty?(player.hand) do
+          Logger.debug("#{game.code}: Player #{player} has won the game!")
+
           game
           |> put_game_into_state(:win)
           |> Map.put(:winner, player_id)
-          |> Map.put(:players, players)
-          |> Map.put(:pile, pile)
           |> new_message("#{player} has won the game!")
         else
-          next_player_index = rem(get_player_index(game, player_id) + 1, length(game.players))
-          next_player = Enum.at(game.players, next_player_index)
+          if card.value == 8 do
+            Logger.debug(
+              "#{game.code}: Player #{player} played an 8 and can now choose the next suit"
+            )
 
-          game
-          |> Map.put(:turn, next_player.id)
-          |> Map.put(:players, players)
-          |> Map.put(:pile, pile)
-          |> new_message("it's now #{next_player}'s turn")
+            game
+            |> Map.put(:turn_state, :pick_next_suit)
+            |> new_message("#{player} played an 8 and can now choose the next suit")
+          else
+            Logger.debug("#{game.code}: Player #{player} played card #{card}")
+
+            game |> next_player()
+          end
         end
 
       {:ok, game}
@@ -196,6 +223,8 @@ defmodule Crazy8.Game do
          {:ok, {card, deck}} <- Deck.draw_card(game.deck) do
       player = %{player | hand: player.hand ++ [card]}
 
+      Logger.debug("#{game.code}: Player #{player} drew card #{card}")
+
       game =
         game
         |> Map.put(:deck, deck)
@@ -204,6 +233,24 @@ defmodule Crazy8.Game do
           List.replace_at(game.players, get_player_index(game, player_id), player)
         )
         |> new_message("player #{player} drew card")
+
+      {:ok, game}
+    end
+  end
+
+  @spec pick_next_suit(t(), String.t(), atom()) :: {:ok, t()} | {:error, atom()}
+  def pick_next_suit(game, player_id, suit) do
+    with :ok <- is_game_in_state(game, :playing),
+         {:ok, player} <- get_player_by_id(game, player_id),
+         :ok <- is_player_turn(game, player_id),
+         :ok <- is_turn_state(game, :pick_next_suit) do
+      Logger.debug("#{game.code}: Player #{player} picked next suit #{suit}")
+
+      game =
+        game
+        |> Map.put(:next_suit, suit)
+        |> new_message("player #{player} picked next suit #{suit}")
+        |> next_player()
 
       {:ok, game}
     end
@@ -220,12 +267,32 @@ defmodule Crazy8.Game do
     end
   end
 
+  @spec next_player(t()) :: t()
+  def next_player(game) do
+    next_player_index = rem(get_player_index(game, game.turn) + 1, length(game.players))
+    next_player = Enum.at(game.players, next_player_index)
+
+    game
+    |> Map.put(:turn, next_player.id)
+    |> Map.put(:turn_state, :play_or_draw_card)
+    |> new_message("it's now #{next_player}'s turn")
+  end
+
   @spec is_game_in_state(t(), game_state) :: :ok | {:error, atom()}
   def is_game_in_state(game, state) do
     if game.state == state do
       :ok
     else
       {:error, :game_not_in_state}
+    end
+  end
+
+  @spec is_turn_state(t(), turn_state) :: :ok | {:error, atom()}
+  def is_turn_state(game, state) do
+    if game.turn_state == state do
+      :ok
+    else
+      {:error, :turn_not_in_state}
     end
   end
 

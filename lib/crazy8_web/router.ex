@@ -21,8 +21,9 @@ defmodule Crazy8Web.Router do
 
     live_session :default do
       live "/", LobbyLive
-      live "/game/:code", GameLive
-      live "/single-pane-game/:code", SinglePaneGameLive
+      live "/game/:code/main", MainLive
+      live "/game/:code/player", PlayerLive
+      live "/game/:code/single-pane", SinglePaneGameLive
     end
   end
 

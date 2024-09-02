@@ -3,6 +3,14 @@ defmodule Crazy8.GameServer do
   alias Crazy8.Game
   require Logger
 
+  def generate_code() do
+    ?a..?z |> Enum.take_random(4) |> List.to_string() |> String.upcase()
+  end
+
+  def code_valid?(code) do
+    code |> String.match?(~r/^[A-Z]{4}$/)
+  end
+
   def start_link(code) do
     Logger.info("Game server starting #{code}")
     GenServer.start(__MODULE__, code, name: via_tuple(code))
@@ -29,6 +37,9 @@ defmodule Crazy8.GameServer do
 
   def draw_card(code, player_id), do: call_by_code(code, {:draw_card, player_id})
 
+  def pick_next_suit(code, player_id, suit),
+    do: call_by_code(code, {:pick_next_suit, player_id, suit})
+
   def broadcast!(code, event, payload \\ %{}) do
     Phoenix.PubSub.broadcast!(Crazy8.PubSub, code, %{event: event, payload: payload})
   end
@@ -41,8 +52,6 @@ defmodule Crazy8.GameServer do
 
   @impl GenServer
   def handle_call({:add_player, player_id, player_name}, _from, state) do
-    Logger.debug("Adding player #{player_id} to game #{state.game.code}")
-
     case Game.add_player(state.game, player_id, player_name) do
       {:ok, game, player} ->
         broadcast_game_updated!(game.code, game)
@@ -60,8 +69,6 @@ defmodule Crazy8.GameServer do
 
   @impl GenServer
   def handle_call({:start_game, player_id}, _from, state) do
-    Logger.debug("Starting game #{state.game.code}")
-
     case Game.start_game(state.game, player_id) do
       {:ok, game} ->
         broadcast_game_updated!(game.code, game)
@@ -74,8 +81,6 @@ defmodule Crazy8.GameServer do
 
   @impl GenServer
   def handle_call({:play_card, player_id, card_index}, _from, state) do
-    Logger.debug("Playing card #{card_index} for player #{player_id} in game #{state.game.code}")
-
     case Game.play_card(state.game, player_id, card_index) do
       {:ok, game} ->
         broadcast_game_updated!(game.code, game)
@@ -88,8 +93,6 @@ defmodule Crazy8.GameServer do
 
   @impl GenServer
   def handle_call({:draw_card, player_id}, _from, state) do
-    Logger.debug("Drawing card for player #{player_id} in game #{state.game.code}")
-
     case Game.draw_card(state.game, player_id) do
       {:ok, game} ->
         broadcast_game_updated!(game.code, game)
@@ -101,8 +104,19 @@ defmodule Crazy8.GameServer do
   end
 
   @impl GenServer
+  def handle_call({:pick_next_suit, player_id, suit}, _from, state) do
+    case Game.pick_next_suit(state.game, player_id, suit) do
+      {:ok, game} ->
+        broadcast_game_updated!(game.code, game)
+        {:reply, {:ok, game}, %{state | game: game}}
+
+      {:error, _} = error ->
+        {:reply, error, state}
+    end
+  end
+
+  @impl GenServer
   def handle_info({:put_game_into_state, game_state}, state) do
-    Logger.debug("Putting game state from #{inspect(state.game.state)} to #{inspect(game_state)}")
     game = Game.put_game_into_state(state.game, game_state)
     broadcast_game_updated!(game.code, game)
     {:noreply, %{state | game: game}}

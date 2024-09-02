@@ -37,11 +37,12 @@
     </div>
 
     {#if game.state === "playing"}
-      <div class="border-y">
-        <div class="flex flex-wrap justify-center items-center min-h-16">
-          <div class="flex flex-col items-center">
-            <img src={game.pile[0].art_url} class="p-4" alt="Top card" />
-          </div>
+      <div class="flex flex-wrap justify-center items-center h-full">
+        <div class="flex flex-col items-center">
+          {#if game.next_suit}
+            <p>Next suit: {game.next_suit}</p>
+          {/if}
+          <img src={game.pile[0].art_url} class="p-4" alt="Top card" />
         </div>
       </div>
     {/if}

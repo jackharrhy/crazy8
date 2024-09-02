@@ -69,20 +69,25 @@ defmodule Crazy8.Card do
     "#{suit_art} #{value_art}"
   end
 
-  @spec can_play(t(), t()) :: :ok | {:error, atom()}
-  def can_play(card, top_card) do
-    if can_play?(card, top_card) do
+  @spec can_play(t(), t(), atom() | nil) :: :ok | {:error, atom()}
+  def can_play(card, top_card, next_suit) do
+    if can_play?(card, top_card, next_suit) do
       :ok
     else
       {:error, :invalid_play}
     end
   end
 
-  @spec can_play?(t(), t()) :: boolean()
-  def can_play?(card, top_card) do
-    card.suit == top_card.suit or
-      card.value == top_card.value or
-      card.value == 8
+  @spec can_play?(t(), t(), atom() | nil) :: boolean()
+  def can_play?(card, top_card, next_suit) do
+    if !is_nil(next_suit) do
+      card.suit == next_suit or
+        card.value == 8
+    else
+      card.suit == top_card.suit or
+        card.value == top_card.value or
+        card.value == 8
+    end
   end
 end
 

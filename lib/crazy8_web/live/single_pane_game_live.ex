@@ -18,6 +18,10 @@ defmodule Crazy8Web.SinglePaneGameLive do
       Logger.debug("Game already exists #{code}")
     end
 
+    if connected?(socket) do
+      :ok = Phoenix.PubSub.subscribe(Crazy8.PubSub, code)
+    end
+
     {:ok, game} = GameServer.get_game(code)
 
     if length(game.players) == 0 do
@@ -30,10 +34,6 @@ defmodule Crazy8Web.SinglePaneGameLive do
 
     socket = assign(socket, game: game)
 
-    if connected?(socket) do
-      :ok = Phoenix.PubSub.subscribe(Crazy8.PubSub, code)
-    end
-
     {:ok, socket}
   end
 
@@ -43,6 +43,7 @@ defmodule Crazy8Web.SinglePaneGameLive do
       <div class="col-span-2 border border-stone-300">
         <.live_component module={Crazy8Web.MainComponent} id="main" game={@game} />
       </div>
+      
       <%= for {player, index} <- Enum.with_index(@game.players) do %>
         <div class={"#{player_area_class(index)} border border-stone-300"}>
           <div class="border-b border-stone-300 py-.5 px-1 text-xs">
@@ -50,6 +51,7 @@ defmodule Crazy8Web.SinglePaneGameLive do
               <%= player.name %>
             </p>
           </div>
+          
           <.live_component
             module={Crazy8Web.PlayerComponent}
             id={"player-#{player.id}"}

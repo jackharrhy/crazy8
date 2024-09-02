@@ -3,6 +3,15 @@ defmodule Crazy8.Deck do
 
   @type cards :: [Card.t()]
 
+  @spec fresh_deck(non_neg_integer()) :: cards()
+  def fresh_deck(num_players) do
+    if num_players <= 4 do
+      fresh_deck()
+    else
+      fresh_deck() ++ fresh_deck()
+    end
+  end
+
   @spec fresh_deck() :: cards()
   def fresh_deck() do
     for suit <- Card.suits(), value <- Card.values() do

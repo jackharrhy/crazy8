@@ -14,6 +14,8 @@ defmodule Crazy8.GameSupervisor do
   end
 
   def start_game(code) do
+    true = GameServer.code_valid?(code)
+
     child_spec = %{
       id: GameServer,
       start: {GameServer, :start_link, [code]},

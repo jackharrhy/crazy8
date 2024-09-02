@@ -1,6 +1,8 @@
 defmodule Crazy8Web.LobbyLive do
   use Crazy8Web, :live_view
 
+  require Logger
+
   alias Crazy8.GameServer
 
   def render(assigns) do
@@ -9,13 +11,15 @@ defmodule Crazy8Web.LobbyLive do
     """
   end
 
-  def generate_code() do
-    ?a..?z |> Enum.take_random(4) |> List.to_string() |> String.upcase()
+  def handle_event("create-game", _fields, socket) do
+    code = GameServer.generate_code()
+    {:noreply, push_navigate(socket, to: ~p"/game/#{code}/main")}
   end
 
-  def handle_event("create-game", _fields, socket) do
-    code = generate_code()
-    {:noreply, push_navigate(socket, to: ~p"/game/#{code}?name=#{socket.assigns.name}")}
+  def handle_event("create-single-pane-game", _fields, socket) do
+    code = GameServer.generate_code()
+    Logger.info("Creating single pane game #{code}")
+    {:noreply, push_navigate(socket, to: ~p"/game/#{code}/single-pane")}
   end
 
   def handle_event("update", fields, socket) do
@@ -26,24 +30,25 @@ defmodule Crazy8Web.LobbyLive do
   def handle_event("join-game", fields, socket) do
     %{"code" => code, "name" => name} = fields
 
+    return_to = ~p"/game/#{code}/player"
+    setup_to = ~p"/setup?return_to=#{return_to}&name=#{name}"
+
     if GameServer.game_exists?(code) do
-      {:noreply, push_navigate(socket, to: ~p"/game/#{code}?join&name=#{name}")}
+      {:noreply, push_navigate(socket, to: setup_to)}
     else
       {:noreply, assign(socket, error: "#{code}: game not found")}
     end
   end
 
-  def mount(_params, %{"session_id" => _session_id}, socket) do
-    {:ok,
-     assign(socket,
-       code: "",
-       name: "jack",
-       error: nil,
-       dev: Application.fetch_env!(:crazy8, :dev)
-     )}
-  end
-
   def mount(_params, _session, socket) do
-    {:ok, redirect(socket, to: "/setup?return_to=/")}
+    socket =
+      assign(socket,
+        code: "",
+        name: "",
+        error: nil,
+        dev: Application.fetch_env!(:crazy8, :dev)
+      )
+
+    {:ok, socket}
   end
 end
