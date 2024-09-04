@@ -11,7 +11,12 @@
   $: isPlayerHost = game.host === player.id;
   $: isPlayerTurn = game.turn === player.id;
 
-  const suits = ["hearts", "diamonds", "clubs", "spades"];
+  const suits = [
+    { name: "hearts", symbol: "♥" },
+    { name: "diamonds", symbol: "♦" },
+    { name: "clubs", symbol: "♣" },
+    { name: "spades", symbol: "♠" },
+  ];
 
   if (live) {
     live.handleEvent("flash", (event) => {
@@ -38,7 +43,8 @@
   }
 </script>
 
-<Toaster />
+<Toaster position="top-center" />
+<!-- thanks to aaron -->
 
 <div class="flex flex-col flex-wrap justify-center items-center p-4">
   {#if game.state === "setup"}
@@ -90,10 +96,11 @@
     <div class="flex flex-wrap justify-center items-center gap-4">
       {#each suits as suit}
         <button
-          on:click={() => pickNextSuit(suit)}
+          on:click={() => pickNextSuit(suit.name)}
           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mb-4"
         >
-          {suit}
+          {suit.name}
+          {suit.symbol}
         </button>
       {/each}
     </div>

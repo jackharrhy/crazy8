@@ -166,6 +166,7 @@ defmodule Crazy8.Game do
     with :ok <- is_game_in_state(game, :playing),
          {:ok, player} <- get_player_by_id(game, player_id),
          :ok <- is_player_turn(game, player_id),
+         :ok <- is_turn_state(game, :play_or_draw_card),
          {:ok, card} <- get_card_by_index(player, card_index),
          :ok <- Card.can_play(card, hd(game.pile), game.next_suit) do
       game = game |> new_message("player #{player} played card #{card}")
